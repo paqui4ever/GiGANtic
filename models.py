@@ -4,7 +4,7 @@ import torch.nn as nn
 class Generator(nn.Module):
     # number_of_generator_features defaults to 28 because of MNIST dataset 28x28 images
     # img_channels defaults to 1 because of MNIST dataset grayscale images
-    def __init__(self, latent_dim, number_of_generator_features=28, img_channels=1):
+    def __init__(self, latent_dim=100, number_of_generator_features=28, img_channels=1):
         super().__init__()
         self.latent_dim = latent_dim
 
@@ -38,6 +38,9 @@ class Generator(nn.Module):
             x = x.view(x.shape[0], self.latent_dim, 1, 1)
 
         return self.net(x)
+
+    def sample(self, num_samples):
+        return torch.randn((num_samples, self.latent_dim))
 
 class Discriminator(nn.Module):
     def __init__(self, img_channels, dimension):
