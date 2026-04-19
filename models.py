@@ -42,6 +42,16 @@ class Generator(nn.Module):
     def sample(self, num_samples):
         return torch.randn((num_samples, self.latent_dim))
 
+class InfoGenerator(Generator):
+    def sample(self, num_samples, num_continuous_codes):
+        noise_z = torch.randn((num_samples, self.latent_dim))
+
+        # Rescaling following (high - low) * torch.rand(size) + low so that is in range [-1, 1]
+        codes = 2 * torch.rand((num_samples, num_continuous_codes)) - 1
+
+        # Now the generator will get fed G(z, c) instead of only G(z)
+        return torch.cat([noise_z, codes], dim=1)
+
 class Discriminator(nn.Module):
     def __init__(self, img_channels, dimension):
         super().__init__()
@@ -69,3 +79,32 @@ class Discriminator(nn.Module):
     def forward(self, x):
         x = self.net(x)
         return x.view(x.shape[0], -1) # Flatten the output to a 1D vector
+
+class Q_head(nn.Module):
+    def __init__(self, latent_dim, num_discrete_codes=10, num_continuous_codes=2):
+        super().__init__()
+
+        self.fc = nn.Linear(latent_dim, 128)
+
+        self.activation = nn.LeakyReLU()
+
+        # Discrete logit branch that will learn a categorical distribution
+        self.discrete_logits = nn.Linear(128, num_discrete_codes)
+
+        # Continuous mean and log-variance branch that will learn a Gaussian distribution
+        self.mean = nn.Linear(128, num_continuous_codes)
+        # Using log variance we allow the input to be negative and the output to be in (-inf, +inf)
+        self.log_var = nn.Linear(128, num_continuous_codes)
+
+    def forward(self, x):
+        x = self.fc(self.activation(x))
+
+        discrete_logits = self.discrete_logits(x)
+
+        mean = self.mean(x)
+        log_var = self.log_var(x)
+
+        return discrete_logits, mean, log_var
+
+# For InfoGAN the Q_head must return the mean (mu) and the variance (sigma squared) because we asume that 
+# the relationship between the code and the image in Q(c|x) follows a Gaussian normal distribution
