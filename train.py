@@ -3,6 +3,7 @@ import torch.optim as optim
 import torch.nn as nn 
 
 from models import Generator, Discriminator
+from utils import gaussian_negative_log_likelihood
 
 from torchvision import transforms
 from torchvision.datasets import MNIST
@@ -65,6 +66,8 @@ if args.model == "DCGAN":
     # We need to set up the Binary Cross Entropy Loss
     criterion = nn.BCEWithLogitsLoss() # Combines the sigmoid activation and the BCELoss in one single function using log-sum-exp trick
 
+if args.model == "InfoGAN":
+    criterion = nn.GaussianNLLLoss()
 
 def _w_discriminator_train_epoch(loader, batch_size, discriminator_optimizer):
     # In the case of the W-GAN the discriminator measures the distance between the real and the fake distributions
@@ -143,8 +146,32 @@ def _dc_generator_train_epoch(batch_size, generator_optimizer, criterion):
 def _infogan_discriminator_train_epoch(loader, batch_size, discriminator_optimizer):
     pass
 
-def _infogan_generator_train_epoch(batch_size, generator_optimizer):
-    pass
+def _infogan_generator_train_epoch(batch_size, generator_optimizer, criterion, num_continuous_codes=2, lambda_var=1):
+    # generated_data has the form [noise_z, codes]
+    generated_data = generator.sample(batch_size, num_continuous_codes)
+    probs_generated = discriminator(generated_data)
+
+    discrete_logits, mean, log_var = Q_head(generated_data)
+
+    # Compute the discrete loss
+    discrete_loss = nn.CrossEntropyLoss(discrete_logits, torch.ones_like(discrete_logits))
+
+    # Compute the continuous loss
+    var = torch.exp(log_var)
+    codes = generated_data[:, batch_size:]
+    continuous_loss = criterion(codes, mean, var=var)
+
+    # continuous_loss = gaussian_negative_log_likelihood(codes, mean, var)
+    
+    # Trains the generator to see the generated images as real
+    generator_loss = criterion(probs_generated, torch.ones_like(probs_generated))
+
+    # Backprop
+    generator_optimizer.zero_grad()
+    generator_loss.backward()
+    generator_optimizer.step()
+
+    return generator_loss.item()
 
 
 print("Starting training...")
