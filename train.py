@@ -38,7 +38,7 @@ parser.add_argument(
 parser.add_argument(
     "--batch_size",
     type=int,
-    default=32,
+    default=1024,
     help="Batch size for training"
 )
 parser.add_argument(
@@ -69,6 +69,11 @@ parser.add_argument(
     action="store_true",
     help="Save a gif of the generated images every n epochs"
 )
+parser.add_argument(
+    "--amp",
+    action="store_true",
+    help="Enable Automatic Mixed Precision (AMP)"
+)
 
 args = parser.parse_args()
 
@@ -78,6 +83,10 @@ NUM_EPOCHS = args.epochs
 
 # Define device
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+
+# The scaler is needed so gradients can be in the float16 range 
+scaler_d = torch.amp.GradScaler(DEVICE, enabled=args.amp) if args.amp and DEVICE == 'cuda' else None
+scaler_g = torch.amp.GradScaler(DEVICE, enabled=args.amp) if args.amp and DEVICE == 'cuda' else None
 
 CHECKPOINT_DIR = "./checkpoints/WGAN-no-sched-norm-no-batch"
 os.makedirs(CHECKPOINT_DIR, exist_ok=True)
@@ -131,24 +140,34 @@ elif args.model == "InfoGAN":
 def _w_discriminator_train_epoch(real_data, batch_size, discriminator_optimizer):
     # In the case of the W-GAN the discriminator (more often called critic in this case) measures the distance between the real 
     # and the fake distributions
-    # Generate fake data out of the latent
-    latent = generator.sample(batch_size, device=DEVICE)
-    generated_data = generator(latent)
-    # real_data = loader.sample(batch_size)
-
-    # Calculate discriminator's predictions for both real and fake
-    probs_real, _ = discriminator(real_data)
-    probs_generated, _ = discriminator(generated_data.detach()) # detach so it doesnt ruin the generators weights
-
-    # Compute the loss for the discriminator
     discriminator_optimizer.zero_grad()
-    # We take the mean because, we know by Monte Carlo and the Law of Large Numbers, that as the number of samples n increases, the mean of the samples converges to the expected value
-    # giving the Kantorovich-Rubinstein Duality (that's equal to the Wasserstein distance)
-    loss = probs_generated.mean() - probs_real.mean() # We want to maximize the difference between the real and the fake images
+    
+    with torch.amp.autocast(device_type=DEVICE, enabled=args.amp):
+        # Generate fake data out of the latent
+        latent = generator.sample(batch_size, device=DEVICE)
+        generated_data = generator(latent)
+        # real_data = loader.sample(batch_size)
+
+        # Calculate discriminator's predictions for both real and fake
+        probs_real, _ = discriminator(real_data)
+        probs_generated, _ = discriminator(generated_data.detach()) # detach so it doesnt ruin the generators weights
+
+        # Compute the loss for the discriminator
+        # We take the mean because, we know by Monte Carlo and the Law of Large Numbers, that as the number of samples n increases, the mean of the samples converges to the expected value
+        # giving the Kantorovich-Rubinstein Duality (that's equal to the Wasserstein distance)
+        loss = probs_generated.mean() - probs_real.mean() # We want to maximize the difference between the real and the fake images
 
     # Backprop 
-    loss.backward()
-    discriminator_optimizer.step()
+    if scaler_d:
+        # Scale the gradients to fp16 and backward guaranteeing no underflow 
+        scaler_d.scale(loss).backward()
+        # Unscales + checks if theres any NaN (if there is it skips step)
+        scaler_d.step(discriminator_optimizer)
+        # Updates the scale for the next iteration trying to increase it after some time being stable (no NaNs)
+        scaler_d.update()
+    else:
+        loss.backward()
+        discriminator_optimizer.step()
 
     # Weight clipping so that it satisfies the Lipschitz constraint (it limits how much the weights are changing per epoch), therefore its 1-Lipschitz continuous
     for p in discriminator.parameters(): 
@@ -157,53 +176,75 @@ def _w_discriminator_train_epoch(real_data, batch_size, discriminator_optimizer)
     return loss.item()
 
 def _w_generator_train_epoch(batch_size, generator_optimizer):
-    # Generate the data and calculate discriminators prediction
-    latent = generator.sample(batch_size, device=DEVICE)
-    generated_data = generator(latent)
-    probs_generated, _ = discriminator(generated_data)
-
-    generator_loss = -probs_generated.mean() # Its negative because we want to maximize the score for the discriminators score
-
     generator_optimizer.zero_grad()
-    generator_loss.backward()
-    generator_optimizer.step()
+    
+    with torch.amp.autocast(device_type=DEVICE, enabled=args.amp):
+        # Generate the data and calculate discriminators prediction
+        latent = generator.sample(batch_size, device=DEVICE)
+        generated_data = generator(latent)
+        probs_generated, _ = discriminator(generated_data)
+
+        generator_loss = -probs_generated.mean() # Its negative because we want to maximize the score for the discriminators score
+
+    # Backprop
+    if scaler_g:
+        scaler_g.scale(generator_loss).backward()
+        scaler_g.step(generator_optimizer)
+        scaler_g.update()
+    else:
+        generator_loss.backward()
+        generator_optimizer.step()
 
     return generator_loss.item()
 
 def _dc_discriminator_train_epoch(real_data, batch_size, discriminator_optimizer, criterion):
-    # Generate real and fake data
-    latent = generator.sample(batch_size, device=DEVICE)
-    generated_data = generator(latent)
-    # real_data = loader.sample(batch_size)
-
-    # Calculate discriminator's predictions for both real and fake
-    probs_real, _ = discriminator(real_data)
-    probs_generated, _ = discriminator(generated_data.detach()) # detach so it doesnt ruin the generators weights
-
-    # Compute the loss for the discriminator
     discriminator_optimizer.zero_grad()
-    # Trains the discriminator to output 1 for real images and 0 for fake images, that being, maximizing the probability of correctly labeling the images
-    loss = criterion(probs_real, torch.ones_like(probs_real)) + criterion(probs_generated, torch.zeros_like(probs_generated))
+    
+    with torch.amp.autocast(device_type=DEVICE, enabled=args.amp):
+        # Generate real and fake data
+        latent = generator.sample(batch_size, device=DEVICE)
+        generated_data = generator(latent)
+        # real_data = loader.sample(batch_size)
+
+        # Calculate discriminator's predictions for both real and fake
+        probs_real, _ = discriminator(real_data)
+        probs_generated, _ = discriminator(generated_data.detach()) # detach so it doesnt ruin the generators weights by flowing back through generated_data
+
+        # Compute the loss for the discriminator
+        # Trains the discriminator to output 1 for real images and 0 for fake images, that being, maximizing the probability of correctly labeling the images
+        loss = criterion(probs_real, torch.ones_like(probs_real)) + criterion(probs_generated, torch.zeros_like(probs_generated))
 
     # Backprop
-    loss.backward()
-    discriminator_optimizer.step()
+    if scaler_d:
+        scaler_d.scale(loss).backward()
+        scaler_d.step(discriminator_optimizer)
+        scaler_d.update()
+    else:
+        loss.backward()
+        discriminator_optimizer.step()
 
     return loss.item()
 
 
 def _dc_generator_train_epoch(batch_size, generator_optimizer, criterion):
-    latent = generator.sample(batch_size, DEVICE)
-    generated_data = generator(latent)
-    probs_generated, _ = discriminator(generated_data)
+    generator_optimizer.zero_grad()
+    
+    with torch.amp.autocast(device_type=DEVICE, enabled=args.amp):
+        latent = generator.sample(batch_size, DEVICE)
+        generated_data = generator(latent)
+        probs_generated, _ = discriminator(generated_data)
 
-    # Trains the discriminator to see the generated images as real, minimizing the loss between the discriminator's prediction and 1
-    generator_loss = criterion(probs_generated, torch.ones_like(probs_generated))
+        # Trains the discriminator to see the generated images as real, minimizing the loss between the discriminator's prediction and 1
+        generator_loss = criterion(probs_generated, torch.ones_like(probs_generated))
 
     # Backprop
-    generator_optimizer.zero_grad()
-    generator_loss.backward()
-    generator_optimizer.step()
+    if scaler_g:
+        scaler_g.scale(generator_loss).backward()
+        scaler_g.step(generator_optimizer)
+        scaler_g.update()
+    else:
+        generator_loss.backward()
+        generator_optimizer.step()
 
     return generator_loss.item()
 
@@ -211,36 +252,43 @@ def _dc_generator_train_epoch(batch_size, generator_optimizer, criterion):
 #     pass
 
 def _infogan_generator_train_epoch(batch_size, generator_optimizer, criterion, num_continuous_codes=2, lambda_var=1):
-    # generated_data has the form [noise_z, codes]
-    latent = generator.sample(batch_size, num_continuous_codes, device=DEVICE)
-    generated_data = generator(latent)
-    probs_generated, features = discriminator(generated_data)
-
-    discrete_logits, mean, log_var = Q_head(features)
-
-    # Compute the discrete loss via CE
-    discrete_loss = discrete_criterion(discrete_logits, torch.ones_like(discrete_logits))
-
-    # Compute the continuous loss via GNLL
-    var = torch.exp(log_var)
-    codes = generated_data[:, batch_size:]
-    continuous_loss = continuous_criterion(codes, mean, var=var)
-
-    # continuous_loss = gaussian_negative_log_likelihood(codes, mean, var)
+    generator_optimizer.zero_grad()
     
-    # Trains the generator to see the generated images as real
-    generator_loss = criterion(probs_generated, torch.ones_like(probs_generated))
+    with torch.amp.autocast(device_type=DEVICE, enabled=args.amp):
+        # generated_data has the form [noise_z, codes]
+        latent = generator.sample(batch_size, num_continuous_codes, device=DEVICE)
+        generated_data = generator(latent)
+        probs_generated, features = discriminator(generated_data)
 
-    # Complete the loss computation
-    codes_loss = continuous_loss + discrete_loss
+        discrete_logits, mean, log_var = Q_head(features)
 
-    # Loss follows V(D, G) - lambda * L_I(G, Q) where L_I is the lower bound of the mutual information
-    complete_gen_loss = generator_loss + lambda_var * codes_loss
+        # Compute the discrete loss via CE
+        discrete_loss = discrete_criterion(discrete_logits, torch.ones_like(discrete_logits))
+
+        # Compute the continuous loss via GNLL
+        var = torch.exp(log_var)
+        codes = generated_data[:, batch_size:]
+        continuous_loss = continuous_criterion(codes, mean, var=var)
+
+        # continuous_loss = gaussian_negative_log_likelihood(codes, mean, var)
+        
+        # Trains the generator to see the generated images as real
+        generator_loss = criterion(probs_generated, torch.ones_like(probs_generated))
+
+        # Complete the loss computation
+        codes_loss = continuous_loss + discrete_loss
+
+        # Loss follows V(D, G) - lambda * L_I(G, Q) where L_I is the lower bound of the mutual information
+        complete_gen_loss = generator_loss + lambda_var * codes_loss
 
     # Backprop
-    generator_optimizer.zero_grad()
-    complete_gen_loss.backward()
-    generator_optimizer.step()
+    if scaler_g:
+        scaler_g.scale(complete_gen_loss).backward()
+        scaler_g.step(generator_optimizer)
+        scaler_g.update()
+    else:
+        complete_gen_loss.backward()
+        generator_optimizer.step()
 
     return complete_gen_loss.item()
 
