@@ -1,4 +1,4 @@
-import pytorch
+import torch
 
 def gaussian_negative_log_likelihood(codes, mu, log_var):
     squared_error = (codes - mu) ** 2
