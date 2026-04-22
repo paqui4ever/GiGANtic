@@ -56,6 +56,7 @@ parser.add_argument(
 parser.add_argument(
     "--checkpoint_dir",
     type=str,
+    required=True,
     default="./checkpoints",
     help="Directory to save checkpoints"
 )
@@ -88,7 +89,7 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 scaler_d = torch.amp.GradScaler(DEVICE, enabled=args.amp) if args.amp and DEVICE == 'cuda' else None
 scaler_g = torch.amp.GradScaler(DEVICE, enabled=args.amp) if args.amp and DEVICE == 'cuda' else None
 
-CHECKPOINT_DIR = "./checkpoints/WGAN-no-sched-norm-no-batch"
+CHECKPOINT_DIR = args.checkpoint_dir
 os.makedirs(CHECKPOINT_DIR, exist_ok=True)
 
 # Define both nn for GAN (and optimizers in the case of InfoGAN)
@@ -133,6 +134,7 @@ if args.model == "DCGAN":
     # We need to set up the Binary Cross Entropy Loss
     criterion = nn.BCEWithLogitsLoss() # Combines the sigmoid activation and the BCELoss in one single function using log-sum-exp trick
 elif args.model == "InfoGAN":
+    criterion = nn.BCEWithLogitsLoss() # Combines the sigmoid activation and the BCELoss in one single function using log-sum-exp trick
     continuous_criterion = nn.GaussianNLLLoss()
     discrete_criterion = nn.CrossEntropyLoss()
 
@@ -256,19 +258,19 @@ def _infogan_generator_train_epoch(batch_size, generator_optimizer, criterion, n
     
     with torch.amp.autocast(device_type=DEVICE, enabled=args.amp):
         # generated_data has the form [noise_z, codes]
-        latent = generator.sample(batch_size, num_continuous_codes, device=DEVICE)
+        latent = generator.sample(batch_size, device=DEVICE, num_continuous_codes=num_continuous_codes)
         generated_data = generator(latent)
         probs_generated, features = discriminator(generated_data)
 
-        discrete_logits, mean, log_var = Q_head(features)
+        discrete_logits, mean, log_var = q_head(features)
 
         # Compute the discrete loss via CE
         discrete_loss = discrete_criterion(discrete_logits, torch.ones_like(discrete_logits))
 
         # Compute the continuous loss via GNLL
         var = torch.exp(log_var)
-        codes = generated_data[:, batch_size:]
-        continuous_loss = continuous_criterion(codes, mean, var=var)
+        codes = latent[:, -num_continuous_codes:]
+        continuous_loss = continuous_criterion(mean, codes, var=var)
 
         # continuous_loss = gaussian_negative_log_likelihood(codes, mean, var)
         
@@ -303,7 +305,7 @@ print(f"Starting training on {DEVICE}...")
 discriminator_step_number = 0
 
 # Fix latents to evaluate progress via gif 
-fixed_latents = (generator.sample(num_samples=64, device=DEVICE)).to(DEVICE)
+fixed_latents = (generator.sample(num_samples=64, num_continuous_codes=2, device=DEVICE)).to(DEVICE)
 progress_images = []
 
 # Tensorboard writer to log losses and images
