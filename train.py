@@ -16,6 +16,7 @@ import argparse
 import imageio
 import os
 import numpy as np
+import random
 
 from tqdm import tqdm
 
@@ -75,8 +76,24 @@ parser.add_argument(
     action="store_true",
     help="Enable Automatic Mixed Precision (AMP)"
 )
+parser.add_argument(
+    "--seed",
+    type=int,
+    default=24,
+    help="Random seed for reproducibility"
+)
 
 args = parser.parse_args()
+
+if args.seed is not None:
+    torch.manual_seed(args.seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(args.seed)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+    np.random.seed(args.seed)
+    random.seed(args.seed)
+    print(f"Set random seed to {args.seed}")
 
 # Define batch size and epoch num
 BATCH_SIZE = args.batch_size # Will determine how precise is the expected value estimation
@@ -305,7 +322,15 @@ print(f"Starting training on {DEVICE}...")
 discriminator_step_number = 0
 
 # Fix latents to evaluate progress via gif 
-fixed_latents = (generator.sample(num_samples=64, num_continuous_codes=2, device=DEVICE)).to(DEVICE)
+latents_path = f"{CHECKPOINT_DIR}/{args.model}_fixed_latents.pt"
+if args.resume_checkpoint > 0 and os.path.exists(latents_path):
+    fixed_latents = torch.load(latents_path, map_location=DEVICE)
+    print("Loaded fixed latents from checkpoint")
+else:
+    fixed_latents = (generator.sample(num_samples=64, num_continuous_codes=2, device=DEVICE)).to(DEVICE)
+    torch.save(fixed_latents, latents_path)
+    print("Saved new fixed latents")
+
 progress_images = []
 
 # Tensorboard writer to log losses and images
