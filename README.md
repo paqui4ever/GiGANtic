@@ -44,30 +44,14 @@ The best performing model was the DCGAN, followed by the InfoGAN and then the WG
 Trained with 150 epochs and batch size of 1024. The final image and training gif are the following:
 
 <p align="center">
-  <table>
-    <tr>
-      <td>
-        <img src="assets/DCGANLast.png" alt="DCGAN Final Image" width="256" height="256">
-      </td>
-      <td>
-      <img src="assets/DCGAN-MNIST.gif" alt="DCGAN Training GIF" width="256" height="256">
-    </td>
-  </tr>
-</table>
+  <img src="assets/DCGANLast.png" alt="DCGAN Final Image" width="256" height="256">
+  <img src="assets/DCGAN-MNIST.gif" alt="DCGAN Training GIF" width="256" height="256">
 </p>
 
 And the generator loss and discriminator loss plots:
 <p align="center">
-  <table>
-    <tr>
-      <td>
-        <img src="assets/DCGAN_generator_loss.png" alt="DCGAN Generator Loss" width="256" height="256">
-      </td>
-      <td>
-        <img src="assets/DCGAN_discriminator_loss.png" alt="DCGAN Discriminator Loss" width="256" height="256">
-      </td>
-    </tr>
-  </table>
+  <img src="assets/DCGAN_generator_loss.png" alt="DCGAN Generator Loss" width="256" height="256">
+  <img src="assets/DCGAN_discriminator_loss.png" alt="DCGAN Discriminator Loss" width="256" height="256">
 </p>
 
 This model took by far the less number of steps to converge to great quality images compared to the other models.
@@ -76,31 +60,15 @@ This model took by far the less number of steps to converge to great quality ima
 Trained with 550 epochs and batch size of 1024, although no visual process can be seen from epochs 500 to 550.
 
 <p align="center">
-  <table>
-    <tr>
-      <td>
-        <img src="assets/WGANLast.png" alt="WGAN Final Image" width="256" height="256">
-      </td>
-      <td>
-        <img src="assets/WGAN-MNIST.gif" alt="WGAN Training GIF" width="256" height="256">
-      </td>
-    </tr>
-  </table>
+  <img src="assets/WGANLast.png" alt="WGAN Final Image" width="256" height="256">
+  <img src="assets/WGAN-MNIST.gif" alt="WGAN Training GIF" width="256" height="256">
 </p>
 
 The losses for both the generator and discriminator can be seen in the following plots:
 
 <p align="center">
-  <table>
-    <tr>
-      <td>
-        <img src="assets/WGAN_generator_loss.png" alt="WGAN Generator Loss" width="256" height="256">
-      </td>
-      <td>
-        <img src="assets/WGAN_discriminator_loss.png" alt="WGAN Discriminator Loss" width="256" height="256">
-      </td>
-    </tr>
-  </table>
+  <img src="assets/WGAN_generator_loss.png" alt="WGAN Generator Loss" width="256" height="256">
+  <img src="assets/WGAN_discriminator_loss.png" alt="WGAN Discriminator Loss" width="256" height="256">
 </p>
 
 We can see that with a lot greater number of steps, the WGAN with weight clipping with a CNN this small can't achieve the same performance as the DCGAN or InfoGAN despite its loss being very close to 0.
@@ -111,30 +79,14 @@ We can see that with a lot greater number of steps, the WGAN with weight clippin
 Trained with 200 epochs and batch size of 1024. The final image and training gif are the following:
 
 <p align="center">
-<table>
-  <tr>
-    <td>
-      <img src="assets/InfoGANLast.png" alt="InfoGAN Final Image" width="256" height="256">
-    </td>
-    <td>
-      <img src="assets/InfoGAN-MNIST.gif" alt="InfoGAN Training GIF" width="256" height="256">
-    </td>
-  </tr>
-</table>
+  <img src="assets/InfoGANLast.png" alt="InfoGAN Final Image" width="256" height="256">
+  <img src="assets/InfoGAN-MNIST.gif" alt="InfoGAN Training GIF" width="256" height="256">
 </p>
 
 And the generator loss and discriminator loss plots:
 <p align="center">
-  <table>
-    <tr>
-      <td>
-        <img src="assets/InfoGAN_generator_loss.png" alt="InfoGAN Generator Loss" width="256" height="256">
-      </td>
-      <td>
-        <img src="assets/InfoGAN_discriminator_loss.png" alt="InfoGAN Discriminator Loss" width="256" height="256">
-      </td>
-    </tr>
-  </table>
+  <img src="assets/InfoGAN_generator_loss.png" alt="InfoGAN Generator Loss" width="256" height="256">
+  <img src="assets/InfoGAN_discriminator_loss.png" alt="InfoGAN Discriminator Loss" width="256" height="256">
 </p>
 
 We can see a very different training dynamic compared to the DCGAN, that first learns the background and then the numbers themselves. Meanwhile the InfoGAN learns the numbers and the background at the same time.
