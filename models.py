@@ -25,7 +25,7 @@ class Generator(nn.Module):
         return nn.Sequential(
             nn.ConvTranspose2d(in_channels, out_channels, kernel_size, stride, padding, bias=False),
             # No bias because of BatchNorm after the convolution
-            nn.BatchNorm2d(out_channels),
+            # nn.BatchNorm2d(out_channels),
             nn.ReLU(inplace=True) # inplace=True doesn't make a copy and is more memory efficient
         )
 
@@ -34,16 +34,21 @@ class Generator(nn.Module):
         # basically making it a 1x1 image with latent_dim number of channels
 
         if len(x.shape) == 2:
-            x = x.view(x.shape[0], self.latent_dim, 1, 1)
+            x = x.view(x.shape[0], x.shape[1], 1, 1)
 
         return self.net(x)
 
-    def sample(self, num_samples, device):
+    def sample(self, num_samples, device, **kwargs):
         return torch.randn((num_samples, self.latent_dim), device=device)
 
 class InfoGenerator(Generator):
-    def sample(self, num_samples, num_continuous_codes, device):
-        noise_z = torch.randn((num_samples, self.latent_dim), device=device)
+    def __init__(self, latent_dim=62, number_of_generator_features=28, img_channels=1, num_continuous_codes=2):
+        # Initialize taking into account the continuos codes added
+        super().__init__(latent_dim + num_continuous_codes, number_of_generator_features, img_channels)
+        self.noise_dim = latent_dim
+
+    def sample(self, num_samples, device, num_continuous_codes=2, **kwargs):
+        noise_z = torch.randn((num_samples, self.noise_dim), device=device)
 
         # Rescaling following (high - low) * torch.rand(size) + low so that is in range [-1, 1]
         codes = 2 * torch.rand((num_samples, num_continuous_codes), device=device) - 1
@@ -71,7 +76,7 @@ class Discriminator(nn.Module):
         return nn.Sequential(
             nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding, bias=False),
             # No bias because of BatchNorm after the convolution
-            nn.BatchNorm2d(out_channels),
+            # nn.BatchNorm2d(out_channels),
             # Leaky ReLU allows for a small alpha*activation when the activation is <0 (for W-GANs, when a sample is classified as being very fake)
             # Basically, it attacks the dying ReLU problem
             nn.LeakyReLU(0.2, inplace=True) 
@@ -88,7 +93,7 @@ class WDiscriminator(Discriminator):
         return nn.Sequential(
             nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding),
             # Leaky ReLU allows for a small alpha*activation when the activation is <0 (for W-GANs, when a sample is classified as being very fake)
-            nn.InstanceNorm2d(out_channels), # Swap batchnorm for instance norm so it doesn't affect training
+            # nn.InstanceNorm2d(out_channels), # Swap batchnorm for instance norm so it doesn't affect training
             # Basically, it attacks the dying ReLU problem
             nn.LeakyReLU(0.2, inplace=True) 
         )
