@@ -83,8 +83,8 @@ When activating the convolutional layers' bias terms, the model barely changed, 
 And the losses for both discriminator and generator are:
 
 <p align="center">
-  <img src="assets/WGAN-MNISTBias/WGAN_bias_generator_loss_complete.svg" alt="WGAN with bias Generator Loss" width="300" height="300">
-  <img src="assets/WGAN-MNISTBias/WGAN_bias_discriminator_loss_complete.svg" alt="WGAN with bias Discriminator Loss" width="300" height="300">
+  <img src="assets/WGAN-MNISTBias/WGAN_bias_generator_loss.svg" alt="WGAN with bias Generator Loss" width="300" height="300">
+  <img src="assets/WGAN-MNISTBias/WGAN_bias_discriminator_loss.svg" alt="WGAN with bias Discriminator Loss" width="300" height="300">
 </p>
 
 ### WGAN-GP
