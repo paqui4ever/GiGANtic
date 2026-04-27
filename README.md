@@ -19,7 +19,7 @@ pip install -r requirements.txt
 To train a model run:
 
 ```bash
-python train.py --model <MODEL_NAME> --epochs <EPOCHS> --batch_size <BATCH_SIZE> 
+python train.py --model <MODEL_NAME> --epochs <EPOCHS> --batch_size <BATCH_SIZE> --checkpoint_dir <CHECKPOINT_DIR>
 ```
 Available model names are: 
 - DCGAN 
@@ -31,7 +31,7 @@ Available model names are:
 To resume training from an epoch number N use the --resume_checkpoint flag:
 
 ```bash
-python train.py --model <MODEL_NAME> --epochs <EPOCHS> --batch_size <BATCH_SIZE> --resume_checkpoint <N>
+python train.py --model <MODEL_NAME> --epochs <EPOCHS> --batch_size <BATCH_SIZE> --checkpoint_dir <CHECKPOINT_DIR> --resume_checkpoint <N> 
 ```
 
 where EPOCHS > N so that the training is done till the total number EPOCHS is reached
@@ -50,14 +50,14 @@ Trained with 150 epochs and batch size of 1024. The final image and training gif
 
 And the generator loss and discriminator loss plots:
 <p align="center">
-  <img src="assets/DCGAN_generator_loss.png" alt="DCGAN Generator Loss" width="256" height="256">
-  <img src="assets/DCGAN_discriminator_loss.png" alt="DCGAN Discriminator Loss" width="256" height="256">
+  <img src="assets/DCGAN_generator_loss.svg" alt="DCGAN Generator Loss" width="256" height="256">
+  <img src="assets/DCGAN_discriminator_loss.svg" alt="DCGAN Discriminator Loss" width="256" height="256">
 </p>
 
 This model took by far the less number of steps to converge to great quality images compared to the other models.
 
 ### WGAN
-Trained with 550 epochs and batch size of 1024, although no visual process can be seen from epochs 500 to 550.
+Trained with 550 epochs and batch size of 1024, and the convolutional layers without the bias term. From epochs 500 to 550 the generated images barely change.
 
 <p align="center">
   <img src="assets/WGANLast.png" alt="WGAN Final Image" width="256" height="256">
@@ -67,11 +67,25 @@ Trained with 550 epochs and batch size of 1024, although no visual process can b
 The losses for both the generator and discriminator can be seen in the following plots:
 
 <p align="center">
-  <img src="assets/WGAN_generator_loss.png" alt="WGAN Generator Loss" width="256" height="256">
-  <img src="assets/WGAN_discriminator_loss.png" alt="WGAN Discriminator Loss" width="256" height="256">
+  <img src="assets/WGAN_generator_loss.svg" alt="WGAN Generator Loss" width="256" height="256">
+  <img src="assets/WGAN_discriminator_loss.svg" alt="WGAN Discriminator Loss" width="256" height="256">
 </p>
 
 We can see that with a lot greater number of steps, the WGAN with weight clipping with a CNN this small can't achieve the same performance as the DCGAN or InfoGAN despite its loss being very close to 0.
+
+When activating the convolutional layers' bias terms, the model barely changed, with almost the exact same performance. So, the final image and the training gif are: 
+
+<p align="center">
+  <img src="assets/WGAN-MNISTBias/WGANLastBias.png" alt="WGAN Final Image" width="256" height="256">
+  <img src="assets/WGAN-MNISTBias/WGAN-MNISTBias.gif" alt="WGAN Training GIF" width="256" height="256">
+</p>
+
+And the losses for both discriminator and generator are:
+
+<p align="center">
+  <img src="assets/WGAN_bias_generator_loss_complete.svg" alt="WGAN Generator Loss" width="256" height="256">
+  <img src="assets/WGAN_bias_discriminator_loss_complete.svg" alt="WGAN Discriminator Loss" width="256" height="256">
+</p>
 
 ### WGAN-GP
 
@@ -85,8 +99,8 @@ Trained with 200 epochs and batch size of 1024. The final image and training gif
 
 And the generator loss and discriminator loss plots:
 <p align="center">
-  <img src="assets/InfoGAN_generator_loss.png" alt="InfoGAN Generator Loss" width="256" height="256">
-  <img src="assets/InfoGAN_discriminator_loss.png" alt="InfoGAN Discriminator Loss" width="256" height="256">
+  <img src="assets/InfoGAN_generator_loss.svg" alt="InfoGAN Generator Loss" width="256" height="256">
+  <img src="assets/InfoGAN_discriminator_loss.svg" alt="InfoGAN Discriminator Loss" width="256" height="256">
 </p>
 
 We can see a very different training dynamic compared to the DCGAN, that first learns the background and then the numbers themselves. Meanwhile the InfoGAN learns the numbers and the background at the same time.
@@ -137,7 +151,7 @@ It also serves as a great example of how the loss metric in GANs doesn't always 
 @article{gulrajani2017improved,
       author="Ishaan Gulrajani and Faruk Ahmed and Martin Arjovsky and Vincent Dumoulin and Aaron Courville",
       title="Improved Training of Wasserstein GANs",
-      journal="Advances in Neural Information Processing Systems (NIPS)",
+      journal="Advances in Neural Information Processing Systems (NeurIPS)",
       year=2017
 }
 ```
