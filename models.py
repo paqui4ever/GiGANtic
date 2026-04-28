@@ -23,8 +23,7 @@ class Generator(nn.Module):
 
     def _block(self, in_channels, out_channels, kernel_size, stride, padding):
         return nn.Sequential(
-            nn.ConvTranspose2d(in_channels, out_channels, kernel_size, stride, padding, bias=False),
-            # No bias because of BatchNorm after the convolution
+            nn.ConvTranspose2d(in_channels, out_channels, kernel_size, stride, padding),
             # nn.BatchNorm2d(out_channels),
             nn.ReLU(inplace=True) # inplace=True doesn't make a copy and is more memory efficient
         )
@@ -40,6 +39,15 @@ class Generator(nn.Module):
 
     def sample(self, num_samples, device, **kwargs):
         return torch.randn((num_samples, self.latent_dim), device=device)
+
+class GeneratorWithBatchNorm(Generator):
+    def _block(self, in_channels, out_channels, kernel_size, stride, padding):
+        return nn.Sequential(
+            nn.ConvTranspose2d(in_channels, out_channels, kernel_size, stride, padding, bias=False),
+            nn.BatchNorm2d(out_channels),
+            nn.ReLU(inplace=True) 
+        )
+
 
 class InfoGenerator(Generator):
     def __init__(self, latent_dim=62, number_of_generator_features=28, img_channels=1, num_continuous_codes=2):
@@ -76,7 +84,7 @@ class Discriminator(nn.Module):
         return nn.Sequential(
             nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding, bias=False),
             # No bias because of BatchNorm after the convolution
-            # nn.BatchNorm2d(out_channels),
+            nn.BatchNorm2d(out_channels),
             # Leaky ReLU allows for a small alpha*activation when the activation is <0 (for W-GANs, when a sample is classified as being very fake)
             # Basically, it attacks the dying ReLU problem
             nn.LeakyReLU(0.2, inplace=True) 
@@ -97,6 +105,41 @@ class WDiscriminator(Discriminator):
             # Basically, it attacks the dying ReLU problem
             nn.LeakyReLU(0.2, inplace=True) 
         )
+
+class EBDiscriminator(nn.Module):
+    # This discriminator has an autoencoder architecture 
+    # such that it has to reconstruct the image that is fed to it
+    def __init__(self, channels=1, hidden_dim=64):
+        super().__init__()
+        self.encoder = nn.Sequential(
+            self._encoder_block(channels, hidden_dim, kernel_size=4, stride=2, padding=1),
+            self._encoder_block(hidden_dim, hidden_dim*2, kernel_size=4, stride=2, padding=1),
+        )
+
+        self.decoder = nn.Sequential(
+            self._decoder_block(hidden_dim*2, hidden_dim, kernel_size=4, stride=2, padding=1),
+            nn.ConvTranspose2d(hidden_dim, channels, kernel_size=4, stride=2, padding=1),
+            nn.Tanh()
+        )
+
+    def _encoder_block(self, in_channels, out_channels, kernel_size, stride, padding):
+        return nn.Sequential(
+            nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding, bias=False),
+            nn.BatchNorm2d(out_channels), # Added back for stability, if not added, it ended immediately in a mode collapse
+            nn.LeakyReLU(0.2, inplace=True) 
+        )
+
+    def _decoder_block(self, in_channels, out_channels, kernel_size, stride, padding):
+        return nn.Sequential(
+            nn.ConvTranspose2d(in_channels, out_channels, kernel_size, stride, padding, bias=False),
+            nn.BatchNorm2d(out_channels), # Added back for stability
+            nn.LeakyReLU(0.2, inplace=True) 
+        ) 
+    
+    def forward(self, x):
+        latent = self.encoder(x)
+        reconstructed = self.decoder(latent)
+        return reconstructed
 
 class Q_head(nn.Module):
     # For InfoGAN the Q_head must return the mean (mu) and the variance (sigma squared) because we asume that 
