@@ -2,7 +2,7 @@ import torch
 import torch.optim as optim
 import torch.nn as nn 
 
-from models import Generator, Discriminator, WDiscriminator, InfoGenerator, Q_head
+from models import Generator, Discriminator, WDiscriminator, InfoGenerator, Q_head, EBDiscriminator, GeneratorWithBatchNorm
 from utils import gaussian_negative_log_likelihood
 
 from torchvision import transforms
@@ -13,6 +13,8 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
 import argparse
+import wandb
+import datetime
 import imageio
 import os
 import numpy as np
@@ -26,20 +28,20 @@ parser = argparse.ArgumentParser(description="Training script for GAN models")
 parser.add_argument(
     "--model",
     type=str,
-    choices=["WGAN", "DCGAN", "InfoGAN"],
+    choices=["WGAN", "DCGAN", "InfoGAN", "EBGAN"],
     required=True,
     help="Model to train"
 )
 parser.add_argument(
     "--epochs",
     type=int,
-    default=100,
+    required=True,
     help="Number of epochs to train"
 )
 parser.add_argument(
     "--batch_size",
     type=int,
-    default=1024,
+    required=True,
     help="Batch size for training"
 )
 parser.add_argument(
@@ -58,7 +60,6 @@ parser.add_argument(
     "--checkpoint_dir",
     type=str,
     required=True,
-    default="./checkpoints",
     help="Directory to save checkpoints"
 )
 parser.add_argument(
@@ -112,6 +113,8 @@ os.makedirs(CHECKPOINT_DIR, exist_ok=True)
 # Define both nn for GAN (and optimizers in the case of InfoGAN)
 if args.model == "WGAN":
     discriminator = WDiscriminator(img_channels=1, dimension=28).to(DEVICE)
+elif args.model == "EBGAN":
+    discriminator = EBDiscriminator(channels=1, hidden_dim=64).to(DEVICE)
 else:
     discriminator = Discriminator(img_channels=1, dimension=28).to(DEVICE)
 
@@ -124,7 +127,10 @@ if args.model == "InfoGAN":
     # itertools.chain bundles its parameters together
     generator_optimizer = optim.Adam(itertools.chain(generator.parameters(), q_head.parameters()), lr = 1e-3, betas=((0.5, 0.999)))
     discriminator_optimizer = optim.Adam(discriminator.parameters(), lr = 2e-4, betas=((0.5, 0.999))) 
+elif args.model in ["EBGAN", "DCGAN"]:
+    generator = GeneratorWithBatchNorm(latent_dim=50).to(DEVICE)
 else:
+    # The normal Generator class doesn't have batchnorm
     generator = Generator(latent_dim=50).to(DEVICE)
 
 # Define optimizers for each nn
@@ -132,11 +138,14 @@ if args.model == "DCGAN":
     # The weight decay of AdamW may hinder stability, favoring imbalance
     discriminator_optimizer = optim.Adam(discriminator.parameters(), lr = 2e-4, betas=((0.5, 0.999))) 
     generator_optimizer = optim.Adam(generator.parameters(), lr = 1e-3, betas=((0.5, 0.999)))
-else:
-#elif args.model == "WGAN":
+elif args.model == "WGAN":
     # Because this is a W-GAN with weight clipping, we use RMSprop instead of Adam, momentum will conflict with weight clipping
     discriminator_optimizer = optim.RMSprop(discriminator.parameters(), lr = 5e-5) 
     generator_optimizer = optim.RMSprop(generator.parameters(), lr = 5e-5)
+elif args.model == "EBGAN":
+    # Following the hyperparameters set in the original paper
+    discriminator_optimizer = optim.Adam(discriminator.parameters(), lr = 2e-4, betas=((0.5, 0.999)))
+    generator_optimizer = optim.Adam(generator.parameters(), lr = 2e-4, betas=((0.5, 0.999)))
 
 # Download the dataset and normalize between 0 and 1
 train_dataset = MNIST(root="./data", download=True, train=True, transform=transforms.Compose([
@@ -145,8 +154,10 @@ train_dataset = MNIST(root="./data", download=True, train=True, transform=transf
     transforms.Normalize((0.5,), (0.5,)) # Shifts from [0,1] to [-1,1]
 ])) # .ToTensor() normalizes between 0 and 1
 
+# Define the train loader
 train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
 
+# Setting up criterions for models that need them
 if args.model == "DCGAN":
     # We need to set up the Binary Cross Entropy Loss
     criterion = nn.BCEWithLogitsLoss() # Combines the sigmoid activation and the BCELoss in one single function using log-sum-exp trick
@@ -154,8 +165,12 @@ elif args.model == "InfoGAN":
     criterion = nn.BCEWithLogitsLoss() # Combines the sigmoid activation and the BCELoss in one single function using log-sum-exp trick
     continuous_criterion = nn.GaussianNLLLoss()
     discrete_criterion = nn.CrossEntropyLoss()
+elif args.model == "EBGAN":
+    margin = 0.2 # It must be less than 4 because its the maximum possible difference between to values in [-1,1] range
+               # Then, the max squared difference is 4
+    criterion = nn.MSELoss()
 
-
+# Define private functions to train each model for one epoch
 def _w_discriminator_train_epoch(real_data, batch_size, discriminator_optimizer):
     # In the case of the W-GAN the discriminator (more often called critic in this case) measures the distance between the real 
     # and the fake distributions
@@ -311,13 +326,72 @@ def _infogan_generator_train_epoch(batch_size, generator_optimizer, criterion, n
 
     return complete_gen_loss.item()
 
+def _eb_discriminator_train_epoch(real_data, batch_size, discriminator_optimizer, criterion):
+    discriminator_optimizer.zero_grad()
+
+    with torch.amp.autocast(device_type=DEVICE, enabled=args.amp):
+        latents = generator.sample(batch_size, device=DEVICE)
+        generated_data = generator(latents).detach()
+
+        # The discriminator is an autoencoder so it's trying to "reconstruct" the input image
+        real_reconstruction = discriminator(real_data)
+        # Must output low energy, so that it is close to the data manifold
+        real_energy = criterion(real_reconstruction, real_data)
+
+        fake_reconstruction = discriminator(generated_data)
+        # Must output high energy (but close to margin) to push further of the data manifold
+        fake_energy = criterion(fake_reconstruction, generated_data)
+
+        # Use ReLU margin to keep the second term positive in case that fake_energy > margin
+        # The margin serves a limit to how high the fake_energy can be, so when a fake sample has energy high enough, the loss for it will be 0
+        # That way it lets D focus on other samples and doesn't let D output inf energy destroying gradients for fake images
+        loss_discriminator = real_energy + torch.relu(margin - fake_energy)
+
+    if scaler_d:
+        scaler_d.scale(loss_discriminator).backward()
+        scaler_d.step(discriminator_optimizer)
+        scaler_d.update()
+    else:
+        loss_discriminator.backward()
+        discriminator_optimizer.step()
+
+    return loss_discriminator.item()
+
+def _eb_generator_train_epoch(batch_size, generator_optimizer, criterion):
+    generator_optimizer.zero_grad()
+
+    with torch.amp.autocast(device_type=DEVICE, enabled=args.amp):
+        latents = generator.sample(batch_size, device=DEVICE)
+        generated_data = generator(latents)
+        
+        fake_reconstruction = discriminator(generated_data)
+        loss_generator = criterion(fake_reconstruction, generated_data)
+
+    if scaler_g:
+        scaler_g.scale(loss_generator).backward()
+        scaler_g.step(generator_optimizer)
+        scaler_g.update()
+    else:
+        loss_generator.backward()
+        generator_optimizer.step()
+
+    return loss_generator.item()
+
+
+# Manage checkpoint loading 
 
 if args.resume_checkpoint > 0:
     generator.load_state_dict(torch.load(f"{CHECKPOINT_DIR}/{args.model}_generator_epoch_{args.resume_checkpoint}.pth", map_location=DEVICE))
     discriminator.load_state_dict(torch.load(f"{CHECKPOINT_DIR}/{args.model}_discriminator_epoch_{args.resume_checkpoint}.pth", map_location=DEVICE))
     print(f"Loaded checkpoint for epoch {args.resume_checkpoint}")
 
-print(f"Starting training on {DEVICE}...")
+print(f"Starting training of {args.model} on {DEVICE}...")
+
+# Count trainable parameters
+generator_num_params = sum(p.numel()for p in generator.parameters() if p.requires_grad)
+discriminator_num_params = sum(p.numel() for p in discriminator.parameters() if p.requires_grad)
+
+print(f"The current models generator has {generator_num_params} and the discriminator has {discriminator_num_params} (all trainable) ")
 
 discriminator_step_number = 0
 
@@ -334,7 +408,30 @@ else:
 progress_images = []
 
 # Tensorboard writer to log losses and images
-writer = SummaryWriter(log_dir=f'./runs/{args.model}_training')
+# writer = SummaryWriter(log_dir=f'./runs/{args.model}_training')
+
+# Setup config dictionary to include optimizer and criterion info
+config_dict = vars(args).copy()
+config_dict["generator_optimizer"] = generator_optimizer.__class__.__name__
+config_dict["discriminator_optimizer"] = discriminator_optimizer.__class__.__name__
+
+if args.model in ["DCGAN", "EBGAN"]:
+    config_dict["criterion"] = criterion.__class__.__name__
+elif args.model == "InfoGAN":
+    config_dict["criterion"] = criterion.__class__.__name__
+    config_dict["continuous_criterion"] = continuous_criterion.__class__.__name__
+    config_dict["discrete_criterion"] = discrete_criterion.__class__.__name__
+elif args.model == "WGAN":
+    config_dict["criterion"] = "Wasserstein Distance"
+
+timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+
+# Initialize wandb
+wandb.init(
+    project="GiGANtic",
+    name=f"{args.model}_training_{timestamp}",
+    config=config_dict
+)
 
 # Training loop
 for epoch in tqdm(range(args.resume_checkpoint, NUM_EPOCHS), desc="Epochs"):
@@ -366,6 +463,11 @@ for epoch in tqdm(range(args.resume_checkpoint, NUM_EPOCHS), desc="Epochs"):
             g_loss = _infogan_generator_train_epoch(BATCH_SIZE, generator_optimizer, criterion)
             epoch_d_loss += d_loss
             epoch_g_loss += g_loss
+        elif args.model == "EBGAN":
+            d_loss = _eb_discriminator_train_epoch(imgs, BATCH_SIZE, discriminator_optimizer, criterion)
+            g_loss = _eb_generator_train_epoch(BATCH_SIZE, generator_optimizer, criterion)
+            epoch_d_loss += d_loss
+            epoch_g_loss += g_loss
 
         # Make the imagegrid for the gifs
         if args.save_gif:
@@ -386,8 +488,14 @@ for epoch in tqdm(range(args.resume_checkpoint, NUM_EPOCHS), desc="Epochs"):
     
     # Log the losses on the tensorboard and print to screen
     print(f"Epoch [{epoch+1}/{NUM_EPOCHS}] D_Loss: {avg_d_loss:.4f} G_Loss: {avg_g_loss:.4f}")
-    writer.add_scalar("Loss/Discriminator", avg_d_loss, epoch)
-    writer.add_scalar("Loss/Generator", avg_g_loss, epoch)
+    # writer.add_scalar("Loss/Discriminator", avg_d_loss, epoch)
+    # writer.add_scalar("Loss/Generator", avg_g_loss, epoch)
+
+    wandb_log_dict = {
+        "Loss/Discriminator": avg_d_loss,
+        "Loss/Generator": avg_g_loss,
+        "epoch": epoch
+    }
 
     # Checkpoint every 25 epochs
     if (epoch + 1) % 25 == 0:
@@ -399,7 +507,13 @@ for epoch in tqdm(range(args.resume_checkpoint, NUM_EPOCHS), desc="Epochs"):
     if epoch % args.save_image_every_n_epochs == 0:
         with torch.no_grad():
             image_grid = make_grid(generator(fixed_latents).cpu(), normalize=True, value_range=(-1, 1))
-            writer.add_image("Generated Images", image_grid, global_step=epoch)
+            # writer.add_image("Generated Images", image_grid, global_step=epoch)
+            
+            image_grid_np = (np.transpose(image_grid.numpy(), (1, 2, 0)) * 255).astype(np.uint8)
+            wandb_log_dict["Generated Images"] = wandb.Image(image_grid_np, caption=f"Epoch {epoch}")
 
-writer.close()
+    wandb.log(wandb_log_dict, step=epoch)
+
+# writer.close()
+wandb.finish()
 
