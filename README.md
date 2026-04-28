@@ -73,7 +73,7 @@ The losses for both the generator and discriminator can be seen in the following
 
 We can see that with a lot greater number of steps, the WGAN with weight clipping with a CNN this small can't achieve the same performance as the DCGAN or InfoGAN despite its loss being very close to 0.
 
-When activating the convolutional layers' bias terms, the model barely changed, with almost the exact same performance. So, the final image and the training gif are: 
+When activating the convolutional layers' bias terms, the model barely changed, with almost the exact same performance. This time I trained it for 500 epochs and the same batch size as before. The final image and training gif are the following:
 
 <p align="center">
   <img src="assets/WGAN-MNISTBias/WGANLastBias.png" alt="WGAN with bias Final Image" width="256" height="256">
@@ -108,7 +108,18 @@ We can see a very different training dynamic compared to the DCGAN, that first l
 It also serves as a great example of how the loss metric in GANs doesn't always correlate with the quality of the generated images. We can see an increasing loss for both the discriminator and the generator on the final part of training, yet the generated images are still improving.
 
 ### EBGAN
+The convergence time on the EBGAN model was very fast, already outputting good quality images on the first 15 epochs. The final results after 225 epochs of training with a batch size of 1024, are the following:
 
+<p align="center">
+  <img src="assets/EBGAN/EBGANLast.png" alt="EBGAN Final Image" width="256" height="256">
+  <img src="assets/EBGAN/EBGAN-MNIST.gif" alt="EBGAN Training GIF" width="256" height="256">
+</p>
+
+Not much progress could be seen after the first 30 epochs or so, also, there was a slight mode collapse, where no 2, 4 and 5 digits could be found. Furthermore, we can see the loss starting to diverge around that epoch number. Finally, the generator loss and discriminator loss plots:
+<p align="center">
+  <img src="assets/EBGAN/EBGAN_generator_loss.svg" alt="EBGAN Generator Loss" width="300" height="300">
+  <img src="assets/EBGAN/EBGAN_discriminator_loss.svg" alt="EBGAN Discriminator Loss" width="300" height="300">
+</p>
 
 ## 📖 References:
 
