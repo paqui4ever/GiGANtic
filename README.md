@@ -130,7 +130,7 @@ $$
 \min_G \max_D \mathbb{E}_{x \sim p_{data}} [\log D(x)] + \mathbb{E}_{z \sim p_z} [\log(1 - D(G(z)))] 
 $$
 
-### 2. Derivation of the Optimal Discriminator $D^*$
+### 2. Derivation of the Optimal Discriminator $D^{*}$
 
 To find the optimal discriminator, we analyze the original GAN value function $V(G,D)$ assuming a fixed generator $G$.
 
@@ -185,20 +185,20 @@ $$
 Returning to our original variables, we conclude that the optimal discriminator is:
 
 $$
-D^*(x) = \frac{p_{data}(x)}{p_{data}(x) + p_G(x)}
+D^{*}(x) = \frac{p_{data}(x)}{p_{data}(x) + p_G(x)}
 $$
 
 ---
 
 ### 3. Proof of the Jensen-Shannon Divergence
 
-Now that we know the optimal discriminator $D^*(x)$, we replace it in the objective function to see what the generator is actually minimizing:
+Now that we know the optimal discriminator $D^{*}(x)$, we replace it in the objective function to see what the generator is actually minimizing:
 
 $$
-\mathbb{E}_{x \sim p_{data}} [\log D^*(x)] + \mathbb{E}_{z \sim p_z} [\log (1 - D^*(G(z)))]
+\mathbb{E}_{x \sim p_{data}} [\log D^{*}(x)] + \mathbb{E}_{z \sim p_z} [\log (1 - D^{*}(G(z)))]
 $$
 
-Replacing the definition of $D^*(x)$:
+Replacing the definition of $D^{*}(x)$:
 
 $$
 \mathbb{E}_{x \sim p_{data}} \left[\log \frac{p_{data}(x)}{p_{data}(x) + p_G(x)}\right] + \mathbb{E}_{z \sim p_z} \left[\log \left(1 - \frac{p_{data}(G(z))}{p_{data}(G(z)) + p_G(G(z))}\right)\right]
