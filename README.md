@@ -125,8 +125,10 @@ Not much progress could be seen after the first 30 epochs or so, also, there was
 
 ### 1. GAN Objective
 
-The GAN objective is conceptually defined by a game between two players, the Discriminator and the Generator: we want the Discriminator to learn which images are real and which are fake at the same time that the Generator tries to fool the Discriminator. The formal definition is given by:
-$$ \min_G \max_D \mathbb{E}_{x \sim p_{data}} [\log D(x)] + \mathbb{E}_{z \sim p_z} [\log(1 - D(G(z)))] $$
+The GAN objective is conceptually defined by a game between two players, the Discriminator and the Generator: we want the Discriminator to learn which images are real and which ones are fake at the same time that the Generator tries to fool the Discriminator. The formal definition is given by:
+$$ 
+\min_G \max_D \mathbb{E}_{x \sim p_{data}} [\log D(x)] + \mathbb{E}_{z \sim p_z} [\log(1 - D(G(z)))] 
+$$
 
 ### 2. Derivation of the Optimal Discriminator $D^*$
 
@@ -256,12 +258,16 @@ With this, we can see that when the Discriminator is optimal, we are approximati
 
 ### 4. WGAN
 The WGAN objective is quite different than the DCGAN one, instead of using the Binary Cross Entropy loss to solve the minimax problem, it uses the Wasserstein distance (also known as the Earth Mover's Distance) to measure the distance between the real and fake distributions. It is given by the following equation:
-$$ W(p_r, p_g) = \inf_{\gamma \in \Pi(p_r, p_g)} \mathbb{E}_{(x,y) \sim \gamma} [\|x-y\|] = \inf_{\gamma \in \Pi(p_r, p_g)} \int_{\gamma(x, y)} \|x-y\| d\gamma(x, y) $$
+$$ 
+W(p_r, p_g) = \inf_{\gamma \in \Pi(p_r, p_g)} \mathbb{E}_{(x,y) \sim \gamma} [\|x-y\|] = \inf_{\gamma \in \Pi(p_r, p_g)} \int_{\gamma(x, y)} \|x-y\| d\gamma(x, y) 
+$$
 where $\gamma$ is the joint distribution of $x$ and $y$ (that gives the probability of $x$ and $y$ occurring together) and $\Pi(p_r, p_g)$ is the set of all joint distributions with marginals $p_r$ and $p_g$. This measure can be thought of as the minimum cost of turning the distribution $p_r$ into $p_g$ by transporting "mass" from one to the other.
 
 In a very high dimensional space we can't compute all the joint distributions, so by the Kantorovich-Rubinstein duality, the metric can be reformulated as:
 
-$$ \min_G \max_D \mathbb{E}_{x \sim p_{data}} [D(x)] - \mathbb{E}_{z \sim p_z} [D(G(z))] $$
+$$ 
+\min_G \max_D \mathbb{E}_{x \sim p_{data}} [D(x)] - \mathbb{E}_{z \sim p_z} [D(G(z))] 
+$$
 where $ D $ is a 1-Lipschitz function, that means that the norm of the gradients of $ D $ are always less than or equal to 1. In order to enforce this constraint we can use the weight clipping method or the gradient penalty method.
 
 I have to add how to do gradient penalty and weight clipping
