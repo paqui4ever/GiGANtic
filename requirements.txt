@@ -4,3 +4,5 @@ numpy>=2.4.4
 imageio>=2.37.3
 tqdm>=4.67.3
 tensorboard>=2.20.0
+wandb>=0.26.1
+matplotlib>=3.10.8
