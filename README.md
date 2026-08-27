@@ -14,6 +14,12 @@ Create a virtual environment and install the dependencies:
 pip install -r requirements.txt
 ```
 
+Log in to wandb by running in the terminal and following the instructions of:
+```bash
+wandb login
+``` 
+
+
 ## 🦾 Training
 
 To train a model run:
@@ -24,7 +30,6 @@ python train.py --model <MODEL_NAME> --epochs <EPOCHS> --batch_size <BATCH_SIZE>
 Available model names are: 
 - DCGAN 
 - WGAN for Wasserstein GAN with weight clipping
-- WGAN with --gradient-penalty flag for Wasserstein GAN with gradient penalty
 - InfoGAN
 - EBGAN
 
@@ -40,7 +45,7 @@ where EPOCHS > N so that the training is done till the total number EPOCHS is re
 
 The best performing model was the DCGAN, followed by the InfoGAN and then the WGAN with weight clipping. In the following lines I'll show the final generated images and the evolution of both generator and discriminator losses.
 
-### ♦︎ DCGAN
+### DCGAN
 Trained with 150 epochs and batch size of 1024. The final image and training gif are the following:
 
 <p align="center">
@@ -48,15 +53,18 @@ Trained with 150 epochs and batch size of 1024. The final image and training gif
   <img src="assets/DCGAN/DCGAN-MNIST.gif" alt="DCGAN Training GIF" width="256" height="256">
 </p>
 
-And the generator loss and discriminator loss plots:
+<details>
+<summary><b>📈 Generator &amp; Discriminator Loss Plots</b></summary>
+<br>
 <p align="center">
   <img src="assets/DCGAN/DCGAN_generator_loss.svg" alt="DCGAN Generator Loss" width="300" height="300">
   <img src="assets/DCGAN/DCGAN_discriminator_loss.svg" alt="DCGAN Discriminator Loss" width="300" height="300">
 </p>
+</details>
 
 This model took by far the less number of steps to converge to great quality images compared to the other models.
 
-### ♦︎ WGAN
+### WGAN
 Trained with 550 epochs and batch size of 1024, and the convolutional layers without the bias term. From epochs 500 to 550 the generated images barely change.
 
 <p align="center">
@@ -64,12 +72,14 @@ Trained with 550 epochs and batch size of 1024, and the convolutional layers wit
   <img src="assets/WGAN/WGAN-MNIST.gif" alt="WGAN Training GIF" width="256" height="256">
 </p>
 
-The losses for both the generator and discriminator can be seen in the following plots:
-
+<details>
+<summary><b>📈 Generator &amp; Discriminator Loss Plots</b></summary>
+<br>
 <p align="center">
   <img src="assets/WGAN/WGAN_generator_loss.svg" alt="WGAN Generator Loss" width="300" height="300">
   <img src="assets/WGAN/WGAN_discriminator_loss.svg" alt="WGAN Discriminator Loss" width="300" height="300">
 </p>
+</details>
 
 We can see that with a lot greater number of steps, the WGAN with weight clipping with a CNN this small can't achieve the same performance as the DCGAN or InfoGAN despite its loss being very close to 0.
 
@@ -80,16 +90,16 @@ When activating the convolutional layers' bias terms, the model barely changed, 
   <img src="assets/WGAN-MNISTBias/WGAN-MNISTBias.gif" alt="WGAN with bias Training GIF" width="256" height="256">
 </p>
 
-And the losses for both discriminator and generator are:
-
+<details>
+<summary><b>📈 Generator &amp; Discriminator Loss Plots</b></summary>
+<br>
 <p align="center">
   <img src="assets/WGAN-MNISTBias/WGAN_bias_generator_loss.svg" alt="WGAN with bias Generator Loss" width="300" height="300">
   <img src="assets/WGAN-MNISTBias/WGAN_bias_discriminator_loss.svg" alt="WGAN with bias Discriminator Loss" width="300" height="300">
 </p>
+</details>
 
-### ♦︎ WGAN-GP
-
-### ♦︎ InfoGAN
+### InfoGAN
 Trained with 200 epochs and batch size of 1024. The final image and training gif are the following:
 
 <p align="center">
@@ -97,17 +107,20 @@ Trained with 200 epochs and batch size of 1024. The final image and training gif
   <img src="assets/InfoGAN/InfoGAN-MNIST.gif" alt="InfoGAN Training GIF" width="256" height="256">
 </p>
 
-And the generator loss and discriminator loss plots:
+<details>
+<summary><b>📈 Generator &amp; Discriminator Loss Plots</b></summary>
+<br>
 <p align="center">
   <img src="assets/InfoGAN/InfoGAN_generator_loss.svg" alt="InfoGAN Generator Loss" width="300" height="300">
   <img src="assets/InfoGAN/InfoGAN_discriminator_loss.svg" alt="InfoGAN Discriminator Loss" width="300" height="300">
 </p>
+</details>
 
 We can see a very different training dynamic compared to the DCGAN, that first learns the background and then the numbers themselves. Meanwhile the InfoGAN learns the numbers and the background at the same time.
 
 It also serves as a great example of how the loss metric in GANs doesn't always correlate with the quality of the generated images. We can see an increasing loss for both the discriminator and the generator on the final part of training, yet the generated images are still improving.
 
-### ♦︎ EBGAN
+### EBGAN
 The convergence time on the EBGAN model was very fast, already outputting good quality images on the first 15 epochs. The final results after 225 epochs of training with a batch size of 1024, are the following:
 
 <p align="center">
@@ -115,20 +128,34 @@ The convergence time on the EBGAN model was very fast, already outputting good q
   <img src="assets/EBGAN/EBGAN-MNIST.gif" alt="EBGAN Training GIF" width="256" height="256">
 </p>
 
-Not much progress could be seen after the first 30 epochs or so, also, there was a slight mode collapse, where no 2, 4 and 5 digits could be found. Furthermore, we can see the loss starting to diverge around that epoch number. Finally, the generator loss and discriminator loss plots:
+<details>
+<summary><b>📈 Generator &amp; Discriminator Loss Plots</b></summary>
+<br>
 <p align="center">
   <img src="assets/EBGAN/EBGAN_generator_loss.svg" alt="EBGAN Generator Loss" width="300" height="300">
   <img src="assets/EBGAN/EBGAN_discriminator_loss.svg" alt="EBGAN Discriminator Loss" width="300" height="300">
 </p>
+</details>
+
+Not much progress could be seen after the first 30 epochs or so, also, there was a slight mode collapse, where no 2, 4 and 5 digits could be found. Furthermore, we can see the loss starting to diverge around that epoch number.
 
 ## ✒️ Appendix: GAN Objectives 
 
-### 1. GAN Objective
+<details>
+<summary><b>1. GAN Objective</b></summary>
+<br>
 
-The GAN objective is conceptually defined by a game between two players, the Discriminator and the Generator: we want the Discriminator to learn which images are real and which ones are fake at the same time that the Generator tries to fool the Discriminator. The formal definition is given by: 
-$$\min_G \max_D \mathbb{E}_{x \sim p_{data}} [\log D(x)] + \mathbb{E}_{z \sim p_z} [\log(1 - D(G(z)))]$$
+The GAN objective is conceptually defined by a game between two players, the Discriminator and the Generator: we want the Discriminator to learn which images are real and which ones are fake at the same time that the Generator tries to fool the Discriminator. The formal definition is given by:
 
-### 2. Derivation of the Optimal Discriminator $D^{*}$
+$$
+\min_G \max_D V(D, G) = \mathbb{E}_{x \sim p_{data}} [\log D(x)] + \mathbb{E}_{z \sim p_z} [\log(1 - D(G(z)))]
+$$
+
+</details>
+
+<details>
+<summary><b>2. Derivation of the Optimal Discriminator $D^{*}$</b></summary>
+<br>
 
 To find the optimal discriminator, we analyze the original GAN value function $V(G,D)$ assuming a fixed generator $G$.
 
@@ -186,11 +213,14 @@ $$
 D^{*}(x) = \frac{p_{data}(x)}{p_{data}(x) + p_G(x)}
 $$
 
----
+</details>
 
-### 3. Proof of the Jensen-Shannon Divergence
+<details>
+<summary><b>3. Proof of the Jensen-Shannon Divergence</b></summary>
+<br>
 
 Now that we know the optimal discriminator $D^{*}(x)$, we replace it in the objective function to see what the generator is actually minimizing:
+
 $$
 \mathbb{E}_{x \sim p_{data}} [\log D^{*}(x)] + \mathbb{E}_{z \sim p_z} [\log (1 - D^{*}(G(z)))]
 $$
@@ -213,7 +243,7 @@ $$
 \mathbb{E}_{x \sim p_{data}} \left[\log \frac{p_{data}(x)}{p_{data}(x) + p_G(x)}\right] + \mathbb{E}_{z \sim p_z} \left[\log \frac{p_G(G(z))}{p_{data}(G(z)) + p_G(G(z))}\right]
 $$
 
-Applying the Change of Variable Theorem (if $z \sim p_z$ and $x = G(z)$, then $x \sim p_G$:
+Applying the Change of Variable Theorem (if $z \sim p_z$ and $x = G(z)$, then $x \sim p_G$):
 
 $$
 \mathbb{E}_{x \sim p_{data}} \left[\log \frac{p_{data}(x)}{p_{data}(x) + p_G(x)}\right] + \mathbb{E}_{x \sim p_G} \left[\log \frac{p_G(x)}{p_{data}(x) + p_G(x)}\right]
@@ -251,76 +281,213 @@ $$
 
 With this, we can see that when the Discriminator is optimal, we are approximating the Jensen-Shannon Divergence between the real and fake distributions. Since the JS Divergence is always non-negative (because it's a symmetric KL divergence with always a finite value because it doesn't depend on the overlap of the two distributions), the minimum value is 0, that is achieved when the two distributions are identical. If we were to reach that state, the Generator would have perfectly learned the data distribution. 
 
----
+</details>
 
-### 4. WGAN
+<details>
+<summary><b>4. WGAN &amp; WGAN-GP</b></summary>
+<br>
 
-The WGAN objective is quite different than the DCGAN one, instead of using the Binary Cross Entropy loss to solve the minimax problem, it uses the Wasserstein distance (also known as the Earth Mover's Distance) to measure the distance between the real and fake distributions. It is given by the following equation: 
-$$W(p_r, p_g) = \inf_{\gamma \in \Pi(p_r, p_g)} \mathbb{E}_{(x,y) \sim \gamma} [|x-y|] = \inf_{\gamma \in \Pi(p_r, p_g)} \int_{\gamma(x, y)} |x-y| \gamma(x, y)$$ 
-where $\gamma$ is the joint distribution of $x$ and $y$ (that gives the probability of $x$ and $y$ occurring together) and $\Pi(p_r, p_g)$ is the set of all joint distributions with marginals $p_r$ and $p_g$. This measure can be thought of as the minimum cost of turning the distribution $p_r$ into $p_g$ by transporting "mass" from one to the other.
+The WGAN objective is quite different from the DCGAN one. Instead of using Binary Cross Entropy to solve the minimax problem, it uses the Wasserstein-1 distance (also known as the Earth Mover's Distance) to measure the distance between the real and generated distributions:
 
-In a very high dimensional space we can't compute all the joint distributions, so by the Kantorovich-Rubinstein duality, the metric can be reformulated as:
+$$
+W(p_r, p_g) = \inf_{\gamma \in \Pi(p_r, p_g)} \mathbb{E}_{(x,y) \sim \gamma} [\|x-y\|_2] = \inf_{\gamma \in \Pi(p_r, p_g)} \iint \|x-y\|_2 \, \gamma(x, y) \, dx \, dy
+$$
 
-$$\min_G \max_D \mathbb{E}_{x \sim p_{data}} [D(x)] - \mathbb{E}_{z \sim p_z} [D(G(z))]$$ 
-where $D$ is a 1-Lipschitz function, that means that the norm of the gradients of $D$ are always less than or equal to 1. In order to enforce this constraint we can use the weight clipping method or the gradient penalty method.
+where $\Pi(p_r, p_g)$ denotes the set of all joint distributions $\gamma(x, y)$ whose marginals are $p_r$ and $p_g$. This metric represents the minimum cost of transporting probability mass to transform distribution $p_r$ into $p_g$.
 
-I have to add how to do gradient penalty and weight clipping
+In high-dimensional spaces, evaluating the infimum over all joint distributions is intractable. By the Kantorovich-Rubinstein duality, the objective can be reformulated as:
 
----
+$$
+\min_G \max_{D \in \mathcal{D}_L} \mathbb{E}_{x \sim p_{data}} [D(x)] - \mathbb{E}_{z \sim p_z} [D(G(z))]
+$$
 
-### 5. InfoGAN
+where $\mathcal{D}_L$ is the family of $K$-Lipschitz continuous functions satisfying:
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+$$
+|D(x_1) - D(x_2)| \le K \|x_1 - x_2\|_2 \quad \Longleftrightarrow \quad \|\nabla_x D(x)\|_2 \le K
+$$
 
----
+To enforce the 1-Lipschitz ($K=1$) constraint on the critic $D$, two primary methods exist:
 
-### 6. EBGAN
+#### 1. Weight Clipping (WGAN)
+Forces all network parameters $w$ to lie within a compact metric space $[-c, c]$ after every gradient update:
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+$$
+w \leftarrow \operatorname{clamp}(w, -c, c)
+$$
 
+While simple, weight clipping often leads to vanishing/exploding gradients and underutilization of the network capacity.
 
-## 📖 References:
+#### 2. Gradient Penalty (WGAN-GP)
+Penalizes the norm of the critic's gradient with respect to interpolated samples $\hat{x}$ directly in the loss function:
 
-```
-@article{zhao2017energybased,
-      author="Junbo Zhao and Michael Mathieu and Yann LeCun",
-      title="Energy-based Generative Adversarial Network",
-      journal="International Conference on Learning Representations (ICLR)",
-      year=2017
-}
-```
-```
-@article{radford2016unsupervised,
-      author="Alec Radford and Luke Metz and Soumith Chintala",
-      title="Unsupervised Representation Learning with Deep Convolutional Generative Adversarial Networks",
-      journal="International Conference on Learning Representations (ICLR)",
-      year=2016
-}
-```
+$$
+\mathcal{L}_{critic} = \underbrace{\mathbb{E}_{\tilde{x} \sim p_g}[D(\tilde{x})] - \mathbb{E}_{x \sim p_{data}}[D(x)]}_{\text{Standard WGAN Critic Loss}} + \underbrace{\lambda \, \mathbb{E}_{\hat{x} \sim p_{\hat{x}}} \left[ \left( \|\nabla_{\hat{x}} D(\hat{x})\|_2 - 1 \right)^2 \right]}_{\text{Gradient Penalty Term}}
+$$
 
-```
-@article{chen2016infogan,
-      author="Xi Chen and Yan Duan and Rein Houthooft and John Schulman and Ilya Sutskever and Pieter Abbeel",
-      title="InfoGAN: Interpretable Representation Learning by Information Maximizing Generative Adversarial Nets",
-      journal="Advances in Neural Information Processing Systems (NeurIPS)",
-      year=2016
-}
-```
+where $\hat{x} = \epsilon x + (1 - \epsilon) \tilde{x}$ for $\epsilon \sim U(0, 1)$ interpolating uniformly along straight lines between real and generated points, and $\lambda$ is the penalty coefficient (commonly $\lambda = 10$).
 
-```
-@article{arjovsky2017wasserstein,
-      author="Martin Arjovsky and Soumith Chintala and Léon Bottou",
-      title="Wasserstein GAN",
-      journal="International Conference on Machine Learning (ICML)",
-      year=2017
-}
-```
+</details>
 
-```
-@article{gulrajani2017improved,
-      author="Ishaan Gulrajani and Faruk Ahmed and Martin Arjovsky and Vincent Dumoulin and Aaron Courville",
-      title="Improved Training of Wasserstein GANs",
-      journal="Advances in Neural Information Processing Systems (NeurIPS)",
-      year=2017
-}
-```
+<details>
+<summary><b>5. InfoGAN</b></summary>
+<br>
+
+In standard GANs, the generator uses the latent noise vector $z$ in an arbitrary, entangled manner: individual dimensions of $z$ rarely correspond to identifiable semantic attributes of the data (such as digit identity, rotation, or line thickness). 
+
+InfoGAN solves this issue in an unsupervised way by decomposing the input noise into two components:
+1. An incompressible noise vector $z \sim p_z(z)$.
+2. A structured latent code vector $c = (c_1, c_2, \dots, c_L) \sim p(c)$, which can include discrete (categorical) and continuous variables.
+
+#### Information-Theoretic Regularization
+To prevent the generator from ignoring the latent codes $c$, InfoGAN maximizes the Mutual Information $I(c; G(z, c))$ between the latent codes $c$ and the generated distribution $G(z, c)$. The minimax objective is defined as:
+
+$$
+\min_G \max_D V_I(D, G) = V(D, G) - \lambda I(c; G(z, c))
+$$
+
+where $V(D, G)$ is the standard GAN value function, and $\lambda > 0$ is a regularization hyperparameter.
+
+#### Variational Information Maximization
+In information theory, mutual information is defined as $I(X; Y) = H(X) - H(X \mid Y)$. For the generator's distribution:
+
+$$
+I(c; G(z, c)) = H(c) - H(c \mid G(z, c)) = \mathbb{E}_{x \sim G(z, c)} \left[ \mathbb{E}_{c' \sim P(c \mid x)} [\log P(c' \mid x)] \right] + H(c)
+$$
+
+Because evaluating the true posterior $P(c \mid x)$ is intractable, InfoGAN defines a variational lower bound by introducing an auxiliary distribution $Q(c \mid x)$ parameterized by an auxiliary neural network head ($Q$) sharing convolutional features with the discriminator $D$:
+
+$$
+I(c; G(z, c)) \ge L_I(G, Q) = \mathbb{E}_{c \sim P(c), \, x \sim G(z, c)} [\log Q(c \mid x)] + H(c)
+$$
+
+Since the prior distribution $P(c)$ is fixed during training, the entropy term $H(c)$ is constant, and the objective simplifies to maximizing $\mathbb{E}_{c \sim P(c), x \sim G(z, c)} [\log Q(c \mid x)]$.
+
+#### Code Reconstruction Losses
+The auxiliary network $Q(c \mid x)$ outputs predictions for each latent code:
+- **Discrete / Categorical codes $c_{\text{disc}}$** (e.g. digit identity): Optimized via Cross-Entropy Loss:
+
+$$
+\mathcal{L}_{\text{disc}} = -\sum_{k} c_{\text{disc}, k} \log Q_k(x)
+$$
+
+- **Continuous codes $c_{\text{cont}}$** (e.g. slant, thickness): $Q$ parameterizes the mean $\mu(x)$ and log-variance $\log \sigma^2(x)$ of a factored Gaussian distribution, optimized via Gaussian Negative Log-Likelihood (GNLL):
+
+$$
+\mathcal{L}_{\text{cont}} = \frac{1}{2} \left[ \log \sigma^2(x) + \frac{(c_{\text{cont}} - \mu(x))^2}{\sigma^2(x)} \right]
+$$
+
+</details>
+
+<details>
+<summary><b>6. EBGAN</b></summary>
+<br>
+
+Energy-Based Generative Adversarial Networks (EBGAN) reinterpret the discriminator as an energy function $D(x) \in [0, +\infty)$ rather than a probability estimator $D(x) \in [0, 1]$. The energy function assigns low energy values to regions in data space where real samples reside, and higher energy values to other regions (unrealistic or fake samples).
+
+#### Autoencoder Discriminator Architecture
+In EBGAN, the discriminator is structured as an autoencoder consisting of an encoder $\operatorname{Enc}$ and a decoder $\operatorname{Dec}$. The energy assigned to an image $x$ is defined as its reconstruction Mean Squared Error (MSE):
+
+$$
+D(x) = \|x - \operatorname{Dec}(\operatorname{Enc}(x))\|_2^2
+$$
+
+Real images belonging to the data manifold are reconstructed with low error (low energy), whereas generated images that deviate from the manifold incur high reconstruction error (high energy).
+
+#### Margin Loss Formulation
+To train the discriminator and prevent the autoencoder from trivially learning to assign zero energy everywhere (the degenerate constant function), a positive margin $m > 0$ is introduced using a hinge loss:
+
+$$
+\mathcal{L}_D(x, z) = D(x) + [m - D(G(z))]^+ = D(x) + \max(0, \, m - D(G(z)))
+$$
+
+$$
+\mathcal{L}_G(z) = D(G(z))
+$$
+
+- **Discriminator**: Minimizes the reconstruction energy $D(x)$ for real images while pushing the energy of generated images $D(G(z))$ to be at least $m$. The hinge $[m - D(G(z))]^+$ ensures that once fake images reach an energy $\ge m$, they produce zero gradient, preventing $D$ from dedicating unnecessary capacity to already unrealistic samples.
+- **Generator**: Minimizes $D(G(z))$, training itself to produce images that the autoencoder can reconstruct with minimal error, effectively placing generated samples onto the low-energy real data manifold.
+
+</details>
+
+## 📖 References
+
+1. **EBGAN** — Junbo Zhao, Michael Mathieu, Yann LeCun.  
+   *Energy-based Generative Adversarial Network*. International Conference on Learning Representations (ICLR), 2017.  
+   [[arXiv:1609.03126](https://arxiv.org/abs/1609.03126)] • [[OpenReview](https://openreview.net/forum?id=S1pEwZ5el)]
+   <details>
+   <summary>BibTeX</summary>
+
+   ```bibtex
+   @article{zhao2017energybased,
+     author  = {Junbo Zhao and Michael Mathieu and Yann LeCun},
+     title   = {Energy-based Generative Adversarial Network},
+     journal = {International Conference on Learning Representations (ICLR)},
+     year    = {2017}
+   }
+   ```
+   </details>
+
+2. **DCGAN** — Alec Radford, Luke Metz, Soumith Chintala.  
+   *Unsupervised Representation Learning with Deep Convolutional Generative Adversarial Networks*. International Conference on Learning Representations (ICLR), 2016.  
+   [[arXiv:1511.06434](https://arxiv.org/abs/1511.06434)]
+   <details>
+   <summary>BibTeX</summary>
+
+   ```bibtex
+   @article{radford2016unsupervised,
+     author  = {Alec Radford and Luke Metz and Soumith Chintala},
+     title   = {Unsupervised Representation Learning with Deep Convolutional Generative Adversarial Networks},
+     journal = {International Conference on Learning Representations (ICLR)},
+     year    = {2016}
+   }
+   ```
+   </details>
+
+3. **InfoGAN** — Xi Chen, Yan Duan, Rein Houthooft, John Schulman, Ilya Sutskever, Pieter Abbeel.  
+   *InfoGAN: Interpretable Representation Learning by Information Maximizing Generative Adversarial Nets*. Advances in Neural Information Processing Systems (NeurIPS), 2016.  
+   [[arXiv:1606.03657](https://arxiv.org/abs/1606.03657)]
+   <details>
+   <summary>BibTeX</summary>
+
+   ```bibtex
+   @article{chen2016infogan,
+     author  = {Xi Chen and Yan Duan and Rein Houthooft and John Schulman and Ilya Sutskever and Pieter Abbeel},
+     title   = {InfoGAN: Interpretable Representation Learning by Information Maximizing Generative Adversarial Nets},
+     journal = {Advances in Neural Information Processing Systems (NeurIPS)},
+     year    = {2016}
+   }
+   ```
+   </details>
+
+4. **WGAN** — Martin Arjovsky, Soumith Chintala, Léon Bottou.  
+   *Wasserstein GAN*. International Conference on Machine Learning (ICML), 2017.  
+   [[arXiv:1701.07875](https://arxiv.org/abs/1701.07875)]
+   <details>
+   <summary>BibTeX</summary>
+
+   ```bibtex
+   @article{arjovsky2017wasserstein,
+     author  = {Martin Arjovsky and Soumith Chintala and L{\'e}on Bottou},
+     title   = {Wasserstein GAN},
+     journal = {International Conference on Machine Learning (ICML)},
+     year    = {2017}
+   }
+   ```
+   </details>
+
+5. **WGAN-GP** — Ishaan Gulrajani, Faruk Ahmed, Martin Arjovsky, Vincent Dumoulin, Aaron Courville.  
+   *Improved Training of Wasserstein GANs*. Advances in Neural Information Processing Systems (NeurIPS), 2017.  
+   [[arXiv:1704.00028](https://arxiv.org/abs/1704.00028)]
+   <details>
+   <summary>BibTeX</summary>
+
+   ```bibtex
+   @article{gulrajani2017improved,
+     author  = {Ishaan Gulrajani and Faruk Ahmed and Martin Arjovsky and Vincent Dumoulin and Aaron Courville},
+     title   = {Improved Training of Wasserstein GANs},
+     journal = {Advances in Neural Information Processing Systems (NeurIPS)},
+     year    = {2017}
+   }
+   ```
+   </details>
