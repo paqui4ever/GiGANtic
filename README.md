@@ -159,7 +159,7 @@ $$
 
 ---
 
-### 2. Derivation of the Optimal Discriminator $D^{*}$
+### 2. Derivation of the Optimal Discriminator $D^\ast$
 
 To find the optimal discriminator, we analyze the original GAN value function $V(G,D)$ assuming a fixed generator $G$:
 
@@ -214,20 +214,20 @@ $$
 Returning to our original variables, we conclude that the optimal discriminator is:
 
 $$
-D^{*}(x) = \frac{p_{data}(x)}{p_{data}(x) + p_G(x)}
+D^\ast(x) = \frac{p_{data}(x)}{p_{data}(x) + p_G(x)}
 $$
 
 ---
 
 ### 3. Proof of the Jensen-Shannon Divergence
 
-Now that we know the optimal discriminator $D^{*}(x)$, we replace it in the objective function to see what the generator is actually minimizing:
+Now that we know the optimal discriminator $D^\ast(x)$, we replace it in the objective function to see what the generator is actually minimizing:
 
 $$
-\mathbb{E}_{x \sim p_{data}} [\log D^{*}(x)] + \mathbb{E}_{z \sim p_z} [\log (1 - D^{*}(G(z)))]
+\mathbb{E}_{x \sim p_{data}} [\log D^\ast(x)] + \mathbb{E}_{z \sim p_z} [\log (1 - D^\ast(G(z)))]
 $$
 
-Replacing the definition of $D^{*}(x)$:
+Replacing the definition of $D^\ast(x)$:
 
 $$
 \mathbb{E}_{x \sim p_{data}} \left[\log \frac{p_{data}(x)}{p_{data}(x) + p_G(x)}\right] + \mathbb{E}_{z \sim p_z} \left[\log \left(1 - \frac{p_{data}(G(z))}{p_{data}(G(z)) + p_G(G(z))}\right)\right]
@@ -313,7 +313,7 @@ To enforce the 1-Lipschitz ($K=1$) constraint on the critic $D$, two primary met
 Forces all network parameters $w$ to lie within a compact metric space $[-c, c]$ after every gradient update:
 
 $$
-w \leftarrow \operatorname{clamp}(w, -c, c)
+w \leftarrow \mathrm{clamp}(w, -c, c)
 $$
 
 While simple, weight clipping often leads to vanishing/exploding gradients and underutilization of the network capacity.
@@ -382,10 +382,10 @@ $$
 Energy-Based Generative Adversarial Networks (EBGAN) reinterpret the discriminator as an energy function $D(x) \in [0, +\infty)$ rather than a probability estimator $D(x) \in [0, 1]$. The energy function assigns low energy values to regions in data space where real samples reside, and higher energy values to other regions (unrealistic or fake samples).
 
 #### Autoencoder Discriminator Architecture
-In EBGAN, the discriminator is structured as an autoencoder consisting of an encoder $\operatorname{Enc}$ and a decoder $\operatorname{Dec}$. The energy assigned to an image $x$ is defined as its reconstruction Mean Squared Error (MSE):
+In EBGAN, the discriminator is structured as an autoencoder consisting of an encoder $\mathrm{Enc}$ and a decoder $\mathrm{Dec}$. The energy assigned to an image $x$ is defined as its reconstruction Mean Squared Error (MSE):
 
 $$
-D(x) = \|x - \operatorname{Dec}(\operatorname{Enc}(x))\|_2^2
+D(x) = \|x - \mathrm{Dec}(\mathrm{Enc}(x))\|_2^2
 $$
 
 Real images belonging to the data manifold are reconstructed with low error (low energy), whereas generated images that deviate from the manifold incur high reconstruction error (high energy).
