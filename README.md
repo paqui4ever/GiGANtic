@@ -149,9 +149,7 @@ Qualitative evaluation and training dynamics across the implemented architecture
 
 ## ✒️ Appendix: GAN Objectives 
 
-<details>
-<summary><b>1. GAN Objective</b></summary>
-<br>
+### 1. GAN Objective
 
 The GAN objective is conceptually defined by a game between two players, the Discriminator and the Generator: we want the Discriminator to learn which images are real and which ones are fake at the same time that the Generator tries to fool the Discriminator. The formal definition is given by:
 
@@ -159,16 +157,14 @@ $$
 \min_G \max_D V(D, G) = \mathbb{E}_{x \sim p_{data}} [\log D(x)] + \mathbb{E}_{z \sim p_z} [\log(1 - D(G(z)))]
 $$
 
-</details>
+---
 
-<details>
-<summary><b>2. Derivation of the Optimal Discriminator $D^{*}$</b></summary>
-<br>
+### 2. Derivation of the Optimal Discriminator $D^{*}$
 
-To find the optimal discriminator, we analyze the original GAN value function $V(G,D)$ assuming a fixed generator $G$.
+To find the optimal discriminator, we analyze the original GAN value function $V(G,D)$ assuming a fixed generator $G$:
 
 $$
-V(G,D) = \int_{\mathcal{X}} p_{data}(x) \log D(x) + p_G(x) \log(1 - D(x)) dx
+V(G,D) = \int_{\mathcal{X}} p_{data}(x) \log D(x) + p_G(x) \log(1 - D(x)) \, dx
 $$
 
 Since we want to maximize this integral for each point $x$ in the domain $\mathcal{X}$, we focus on maximizing the integrand. That is, we want to maximize a function of the form:
@@ -221,11 +217,9 @@ $$
 D^{*}(x) = \frac{p_{data}(x)}{p_{data}(x) + p_G(x)}
 $$
 
-</details>
+---
 
-<details>
-<summary><b>3. Proof of the Jensen-Shannon Divergence</b></summary>
-<br>
+### 3. Proof of the Jensen-Shannon Divergence
 
 Now that we know the optimal discriminator $D^{*}(x)$, we replace it in the objective function to see what the generator is actually minimizing:
 
@@ -289,11 +283,9 @@ $$
 
 With this, we can see that when the Discriminator is optimal, we are approximating the Jensen-Shannon Divergence between the real and fake distributions. Since the JS Divergence is always non-negative (because it's a symmetric KL divergence with always a finite value because it doesn't depend on the overlap of the two distributions), the minimum value is 0, that is achieved when the two distributions are identical. If we were to reach that state, the Generator would have perfectly learned the data distribution. 
 
-</details>
+---
 
-<details>
-<summary><b>4. WGAN &amp; WGAN-GP</b></summary>
-<br>
+### 4. WGAN & WGAN-GP
 
 The WGAN objective is quite different from the DCGAN one. Instead of using Binary Cross Entropy to solve the minimax problem, it uses the Wasserstein-1 distance (also known as the Earth Mover's Distance) to measure the distance between the real and generated distributions:
 
@@ -335,11 +327,9 @@ $$
 
 where $\hat{x} = \epsilon x + (1 - \epsilon) \tilde{x}$ for $\epsilon \sim U(0, 1)$ interpolating uniformly along straight lines between real and generated points, and $\lambda$ is the penalty coefficient (commonly $\lambda = 10$).
 
-</details>
+---
 
-<details>
-<summary><b>5. InfoGAN</b></summary>
-<br>
+### 5. InfoGAN
 
 In standard GANs, the generator uses the latent noise vector $z$ in an arbitrary, entangled manner: individual dimensions of $z$ rarely correspond to identifiable semantic attributes of the data (such as digit identity, rotation, or line thickness). 
 
@@ -385,11 +375,9 @@ $$
 \mathcal{L}_{\text{cont}} = \frac{1}{2} \left[ \log \sigma^2(x) + \frac{(c_{\text{cont}} - \mu(x))^2}{\sigma^2(x)} \right]
 $$
 
-</details>
+---
 
-<details>
-<summary><b>6. EBGAN</b></summary>
-<br>
+### 6. EBGAN
 
 Energy-Based Generative Adversarial Networks (EBGAN) reinterpret the discriminator as an energy function $D(x) \in [0, +\infty)$ rather than a probability estimator $D(x) \in [0, 1]$. The energy function assigns low energy values to regions in data space where real samples reside, and higher energy values to other regions (unrealistic or fake samples).
 
@@ -415,8 +403,6 @@ $$
 
 - **Discriminator**: Minimizes the reconstruction energy $D(x)$ for real images while pushing the energy of generated images $D(G(z))$ to be at least $m$. The hinge $[m - D(G(z))]^+$ ensures that once fake images reach an energy $\ge m$, they produce zero gradient, preventing $D$ from dedicating unnecessary capacity to already unrealistic samples.
 - **Generator**: Minimizes $D(G(z))$, training itself to produce images that the autoencoder can reconstruct with minimal error, effectively placing generated samples onto the low-energy real data manifold.
-
-</details>
 
 ## 📖 References
 
